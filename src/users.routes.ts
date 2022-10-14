@@ -1,13 +1,27 @@
 import { Router, Request, Response, RequestHandler } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { verifyJWT } from './middlewares/verifyjwt'
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 const prisma = new PrismaClient()
 const useRouter = Router()
+const secret = process.env.SECRET
 
-useRouter.get('/', (req: Request, res: Response) => {
-  res.status(200).json('Olá Mundo!')
-})
+// get user
+useRouter.get('/auth/verify', verifyJWT, (async (req: Request, res: Response) => {
+  const { id } = req.body
+
+  const user = await prisma.user.findUnique({ where: { id } })
+  if (!user) {
+    return res.status(404).json({
+      code: 'user.user-not-found',
+      status: 'Usuário não encontrado'
+    })
+  }
+  delete user.password
+  res.status(200).json({ user })
+}) as RequestHandler)
 
 // Register User
 useRouter.post('/auth/register', (async (req: Request, res: Response) => {
@@ -55,6 +69,7 @@ useRouter.post('/auth/register', (async (req: Request, res: Response) => {
   const salt = await bcrypt.genSalt(12)
   const passwordHash = await bcrypt.hash(password, salt)
 
+  // create user
   await prisma.user.create({
     data: {
       name,
@@ -79,6 +94,7 @@ useRouter.post('/auth/register', (async (req: Request, res: Response) => {
 useRouter.post('/auth/login', (async (req: Request, res: Response) => {
   const { email, password } = req.body
 
+  // validate
   if (!email || !password) {
     return res.status(422).json({
       code: 'user.missing-parameters',
@@ -93,7 +109,7 @@ useRouter.post('/auth/login', (async (req: Request, res: Response) => {
   })
   // check user not found
   if (!user) {
-    return res.status(422).json({
+    return res.status(404).json({
       code: 'user.user-not-found',
       message: 'Usuário Não encontrado.'
     })
@@ -106,6 +122,29 @@ useRouter.post('/auth/login', (async (req: Request, res: Response) => {
     return res.status(422).json({
       code: 'user.password-mismatch',
       message: 'Senha inválida.'
+    })
+  }
+
+  try {
+    const token = jwt.sign(
+      {
+        id: user.id
+      },
+      secret,
+      { expiresIn: 300 }
+    )
+    delete user.password
+
+    res.status(200).json({
+      code: 'user.login-success',
+      message: 'Autenticação Realizada com Sucesso',
+      user,
+      token
+    })
+  } catch (err) {
+    res.status(500).json({
+      code: 'user.server-error',
+      message: 'Sem comunicação com o servidor, tente novamente mais tarde.'
     })
   }
 }) as RequestHandler)
