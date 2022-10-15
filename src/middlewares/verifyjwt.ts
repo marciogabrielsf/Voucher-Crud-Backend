@@ -15,7 +15,6 @@ export function verifyJWT (req: Request, res: Response, next: NextFunction): voi
   jwt.verify(authorization, secret, (error, decoded: JwtPayload) => {
     if (error) return res.status(400).json({ message: 'Invalid Token' })
     req.body.id = decoded.id
-    console.log(req.body.id)
     next()
   })
 }
