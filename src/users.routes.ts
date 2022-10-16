@@ -19,8 +19,17 @@ useRouter.get('/auth/verify', verifyJWT, (async (req: Request, res: Response) =>
       status: 'Usuário não encontrado'
     })
   }
+  const firstName = user.name.split(' ')[0]
   delete user.password
-  res.status(200).json({ user })
+  res.status(200).json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      cpf: user.cpf,
+      firstName
+    }
+  })
 }) as RequestHandler)
 
 // Register User
@@ -134,11 +143,17 @@ useRouter.post('/auth/login', (async (req: Request, res: Response) => {
       { expiresIn: 300 }
     )
     delete user.password
-
+    const firstName = user.name.split(' ')[0]
     res.status(200).json({
       code: 'user.login-success',
       message: 'Autenticação Realizada com Sucesso',
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        cpf: user.cpf,
+        firstName
+      },
       token
     })
   } catch (err) {

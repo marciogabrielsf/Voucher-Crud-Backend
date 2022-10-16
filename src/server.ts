@@ -4,7 +4,7 @@ import useRouter from './users.routes'
 import voucherRoutes from './vouchers.routes'
 import cors from 'cors'
 
-const PORT = 3000
+const PORT = 8888
 const app: Express = express()
 app.use(cors())
 
