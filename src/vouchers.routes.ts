@@ -1,16 +1,58 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Router, Request, Response, RequestHandler } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { verifyJWT } from './middlewares/verifyjwt'
 
 const prisma = new PrismaClient()
 const voucherRoutes = Router()
-const secret = process.env.SECRET
 
-voucherRoutes.get('/voucher/create', (async (req: Request, res: Response) => {
+voucherRoutes.post('/voucher/create', verifyJWT, (async (req: Request, res: Response) => {
   const { value, voucherNumber, orderNumber, company, voucherDate, id } = req.body
-  if (!value || !voucherDate || voucherNumber || orderNumber || company || id) {
-    res.status(422).json({ message: 'Missing parameters' })
+  if (!value || !voucherDate || !voucherNumber || !orderNumber || !company) {
+    return res.status(422).json({ message: 'Missing parameters' })
   }
+
+  const voucherExist = await prisma.voucher.findMany({
+    where: {
+      voucherNumber,
+      userId: id
+    }
+  })
+
+  console.log(voucherExist.length !== 0)
+  if (voucherExist.length !== 0) {
+    return res.status(422).json({ message: 'O Número do voucher já está cadastrado' })
+  }
+
+  const orderExist = await prisma.voucher.findMany({
+    where: {
+      orderNumber,
+      userId: id
+    }
+  })
+
+  if (orderExist.length !== 0) {
+    return res.status(422).json({ message: 'O Número do pedido já está cadastrado' })
+  }
+
+  await prisma.voucher.create({
+    data: {
+      userId: id,
+      value,
+      voucherDate,
+      voucherNumber,
+      company,
+      orderNumber
+    },
+    include: {
+      user: true
+    }
+  }).then(() => {
+    res.status(201).json({
+      code: 'voucher.created-success',
+      message: 'Voucher Criado com sucesso!'
+    })
+  })
 }) as RequestHandler)
 
 export default voucherRoutes

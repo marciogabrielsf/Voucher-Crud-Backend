@@ -9,15 +9,15 @@ interface JwtPayload {
 export function verifyJWT (req: Request, res: Response, next: NextFunction): void {
   const { authorization } = req.headers
 
-  const token = authorization.split(' ')[1]
+  if (authorization) {
+    const token = authorization.split(' ')[1]
 
-  if (!token) {
+    jwt.verify(token, secret, (error, decoded: JwtPayload) => {
+      if (error) return res.status(400).json({ message: 'Invalid Token' })
+      req.body.id = decoded.id
+      next()
+    })
+  } else {
     res.status(401).json({ message: 'Acesso Negado!' })
   }
-
-  jwt.verify(token, secret, (error, decoded: JwtPayload) => {
-    if (error) return res.status(400).json({ message: 'Invalid Token' })
-    req.body.id = decoded.id
-    next()
-  })
 }

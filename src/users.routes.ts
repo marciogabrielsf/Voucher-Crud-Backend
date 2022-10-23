@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 const useRouter = Router()
 const secret = process.env.SECRET
 
-// get user
+// get user ROUTE
 useRouter.get('/auth/verify', verifyJWT, (async (req: Request, res: Response) => {
   const { id } = req.body
 
@@ -99,7 +99,8 @@ useRouter.post('/auth/register', (async (req: Request, res: Response) => {
   })
 }) as RequestHandler)
 
-// Login user
+// Login user ROUTE
+
 useRouter.post('/auth/login', (async (req: Request, res: Response) => {
   const { email, password } = req.body
 
@@ -139,8 +140,7 @@ useRouter.post('/auth/login', (async (req: Request, res: Response) => {
       {
         id: user.id
       },
-      secret,
-      { expiresIn: 300 }
+      secret
     )
     delete user.password
     const firstName = user.name.split(' ')[0]
