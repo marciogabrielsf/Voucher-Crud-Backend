@@ -19,7 +19,6 @@ voucherRoutes.post('/voucher/create', verifyJWT, (async (req: Request, res: Resp
     }
   })
 
-  console.log(voucherExist.length !== 0)
   if (voucherExist.length !== 0) {
     return res.status(422).json({ message: 'O Número do voucher já está cadastrado' })
   }
@@ -56,3 +55,16 @@ voucherRoutes.post('/voucher/create', verifyJWT, (async (req: Request, res: Resp
 }) as RequestHandler)
 
 export default voucherRoutes
+
+voucherRoutes.get('/voucher/getlist', verifyJWT, (async (req: Request, res: Response) => {
+  const id = req.body.id
+
+  const vouchers = await prisma.voucher.findMany({
+    where: {
+      userId: id
+    }
+  })
+  if (vouchers.length === 0) {
+    res.status(422).json({ message: 'Nenhum voucher foi encontrado' })
+  } else { res.status(200).json({ vouchers }) }
+}) as RequestHandler)
