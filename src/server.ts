@@ -1,7 +1,7 @@
 // imports
 import express, { Express } from 'express'
-import useRouter from './users.routes'
-import voucherRoutes from './vouchers.routes'
+import useRouter from './routes/users.routes'
+import voucherRoutes from './routes/vouchers.routes'
 import cors from 'cors'
 
 const PORT = process.env.PORT || 3000

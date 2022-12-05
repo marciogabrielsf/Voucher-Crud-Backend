@@ -1,6 +1,6 @@
 import { Router, Request, Response, RequestHandler } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { verifyJWT } from './middlewares/verifyjwt'
+import { verifyJWT } from '../middlewares/verifyjwt'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
@@ -38,11 +38,11 @@ useRouter.post('/auth/register', (async (req: Request, res: Response) => {
 
   // validation
 
-  if (!name || !email || !cpf || !password || !confirmpassword) {
-    return res.status(422).json({
-      code: 'user.missing-parameters',
-      message: 'Preencha todos os campos!'
-    })
+  if (!name || !email || !cpf || !password || !confirmpassword) { 
+    return res.status(422).json({ 
+      code: 'user.missing-parameters', 
+      message: 'Preencha todos os campos!' 
+    }) 
   }
 
   if (password !== confirmpassword) {
