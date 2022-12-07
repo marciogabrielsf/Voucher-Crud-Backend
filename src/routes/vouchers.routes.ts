@@ -53,7 +53,7 @@ voucherRoutes.post('/voucher/create', verifyJWT, (async (req: Request, res: Resp
       message: 'Voucher Criado com sucesso!'
     })
   }).catch(err => {
-    res.status(500).json({ message: 'Erro ao Atualizar o Voucher, tente novamente mais tarde' })
+    res.status(500).json({ message: 'Erro ao Criar o Voucher, tente novamente mais tarde', error: err.message })
   })
 }) as RequestHandler)
 
@@ -117,7 +117,7 @@ voucherRoutes.put('/voucher/update/:id', verifyJWT, (async (req: Request, res: R
   }).then(() => {
     res.status(200).json({ message: 'Voucher foi atualizado com sucesso!' })
   }).catch(err => {
-    res.status(500).json({ message: 'Erro ao Atualizar o Voucher, tente novamente mais tarde' })
+    res.status(500).json({ message: 'Erro ao Atualizar o Voucher, tente novamente mais tarde', error: err.message })
   })
 
 }) as RequestHandler)
