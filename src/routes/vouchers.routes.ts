@@ -57,7 +57,6 @@ voucherRoutes.post('/voucher/create', verifyJWT, (async (req: Request, res: Resp
   })
 }) as RequestHandler)
 
-export default voucherRoutes
 
 voucherRoutes.get('/voucher/getlist', verifyJWT, (async (req: Request, res: Response) => {
   const id = req.body.id
@@ -157,3 +156,6 @@ voucherRoutes.delete('/voucher/delete/:id', verifyJWT, (async (req: Request, res
   })
 
 }) as RequestHandler)
+
+
+export default voucherRoutes
