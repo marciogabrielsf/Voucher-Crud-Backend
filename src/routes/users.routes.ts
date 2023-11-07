@@ -38,11 +38,11 @@ useRouter.post('/auth/register', (async (req: Request, res: Response) => {
 
   // validation
 
-  if (!name || !email || !cpf || !password || !confirmpassword) { 
-    return res.status(422).json({ 
-      code: 'user.missing-parameters', 
-      message: 'Preencha todos os campos!' 
-    }) 
+  if (!name || !email || !cpf || !password || !confirmpassword) {
+    return res.status(422).json({
+      code: 'user.missing-parameters',
+      message: 'Preencha todos os campos!'
+    })
   }
 
   if (password !== confirmpassword) {
