@@ -19,13 +19,15 @@ model User {
   cpf       String    @unique
   createdAt DateTime? @default(now())
 
-  vouchers Voucher[]
+  vouchers   Voucher[]
+  vouchersV2 VoucherV2[]
+  expenses   Expense[]
 }
 
 model Voucher {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   user          User      @relation(fields: [userId], references: [id])
-  userId        String    @unique
+  userId        String    @db.ObjectId
   value         Float
   voucherNumber Int
   orderNumber   Int
@@ -33,4 +35,44 @@ model Voucher {
   company       String
   updatedAt     DateTime? @updatedAt
   createdAt     DateTime? @default(now())
+}
+
+model VoucherV2 {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id])
+  userId          String    @db.ObjectId
+  taxNumber       String
+  requestCode     String
+  requestCategory String
+  date            DateTime
+  value           Float
+  start           String
+  destination     String
+  updatedAt       DateTime? @updatedAt
+  createdAt       DateTime? @default(now())
+}
+
+enum ExpenseCategory {
+  FOOD
+  TRANSPORT
+  HOUSING
+  ENTERTAINMENT
+  HEALTHCARE
+  EDUCATION
+  UTILITIES
+  SHOPPING
+  OTHER
+}
+
+model Expense {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  user          User            @relation(fields: [userId], references: [id])
+  userId        String          @db.ObjectId
+  value         Float
+  category      ExpenseCategory
+  date          DateTime
+  description   String?
+  paymentMethod String?
+  updatedAt     DateTime?       @updatedAt
+  createdAt     DateTime?       @default(now())
 }
