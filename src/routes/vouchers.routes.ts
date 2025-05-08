@@ -370,7 +370,9 @@ voucherRoutes.post(
         const requestCategory = requestCode.substring(0, 3);
 
         // Parse date string to Date object
-        const parsedDate = new Date(date);
+        // Split the date string by '/' and rearrange to YYYY-MM-DD format for proper Date parsing
+        const [day, month, year] = date.split("/");
+        const parsedDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
         // Parse value string to float (assuming value comes as "252,98" format)
         const parsedValue = typeof value === "string" ? parseFloat(value.replace(",", ".")) : value;
