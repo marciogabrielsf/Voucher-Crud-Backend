@@ -405,4 +405,148 @@ voucherRoutes.post(
     }
 );
 
+// Statistics route for earnings over time
+voucherRoutes.get(
+    "/v2/voucher/statistics/earnings",
+    verifyJWT,
+    async (req: Request, res: Response): Promise<void> => {
+        const userId = req.body.id;
+        const { from, to } = req.query;
+
+        // Default to yearly period if no dates provided
+        const currentDate = new Date();
+        const defaultFromDate = new Date(currentDate.getFullYear(), 0, 1); // Start of current year
+        const defaultToDate = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59); // End of current year
+
+        let fromDate: Date;
+        let toDate: Date;
+
+        try {
+            fromDate = from ? new Date(from as string) : defaultFromDate;
+            toDate = to ? new Date(to as string) : defaultToDate;
+
+            // Validate dates
+            if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+                res.status(422).json({
+                    message: "Invalid date format. Use YYYY-MM-DD format.",
+                });
+                return;
+            }
+
+            if (fromDate >= toDate) {
+                res.status(422).json({
+                    message: "From date must be earlier than to date.",
+                });
+                return;
+            }
+        } catch (error) {
+            res.status(422).json({
+                message: "Invalid date format. Use YYYY-MM-DD format.",
+            });
+            return;
+        }
+
+        try {
+            // Get all vouchers in the date range for the user
+            const vouchers = await prisma.voucherV2.findMany({
+                where: {
+                    userId: userId,
+                    date: {
+                        gte: fromDate,
+                        lte: toDate,
+                    },
+                },
+                select: {
+                    date: true,
+                    value: true,
+                },
+                orderBy: {
+                    date: "asc",
+                },
+            });
+
+            if (vouchers.length === 0) {
+                res.status(200).json({
+                    data: [],
+                    summary: {
+                        totalEarnings: 0,
+                        voucherCount: 0,
+                        period: {
+                            from: fromDate.toISOString().split("T")[0],
+                            to: toDate.toISOString().split("T")[0],
+                        },
+                    },
+                });
+                return;
+            }
+
+            // Calculate the time period in days
+            const timeDiff = toDate.getTime() - fromDate.getTime();
+            const totalDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            // Determine the grouping interval to limit to 150 data points
+            let intervalDays = 1;
+            if (totalDays > 150) {
+                intervalDays = Math.ceil(totalDays / 150);
+            }
+
+            // Group vouchers by intervals
+            const groupedData: { [key: string]: { date: string; value: number; count: number } } =
+                {};
+
+            vouchers.forEach((voucher) => {
+                const voucherDate = new Date(voucher.date);
+                const daysSinceStart = Math.floor(
+                    (voucherDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)
+                );
+                const intervalIndex = Math.floor(daysSinceStart / intervalDays);
+
+                // Calculate the representative date for this interval
+                const intervalStartDate = new Date(
+                    fromDate.getTime() + intervalIndex * intervalDays * 24 * 60 * 60 * 1000
+                );
+                const dateKey = intervalStartDate.toISOString().split("T")[0];
+
+                if (!groupedData[dateKey]) {
+                    groupedData[dateKey] = {
+                        date: dateKey,
+                        value: 0,
+                        count: 0,
+                    };
+                }
+
+                groupedData[dateKey].value += voucher.value;
+                groupedData[dateKey].count += 1;
+            });
+
+            // Convert to array and sort by date
+            const chartData = Object.values(groupedData).sort(
+                (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+            );
+
+            // Calculate summary statistics
+            const totalEarnings = vouchers.reduce((sum, voucher) => sum + voucher.value, 0);
+            const voucherCount = vouchers.length;
+
+            res.status(200).json({
+                data: chartData,
+                summary: {
+                    totalEarnings: Math.round(totalEarnings * 100) / 100, // Round to 2 decimal places
+                    voucherCount,
+                    period: {
+                        from: fromDate.toISOString().split("T")[0],
+                        to: toDate.toISOString().split("T")[0],
+                    },
+                    intervalDays,
+                },
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Erro ao buscar estatísticas de vouchers",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
+    }
+);
+
 export default voucherRoutes;
