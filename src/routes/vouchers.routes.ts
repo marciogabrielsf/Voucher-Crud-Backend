@@ -697,21 +697,18 @@ voucherRoutes.get(
         try {
             const currentDate = new Date();
 
-            // Helper function to calculate period dates
-            const calculatePeriod = (monthOffset: number) => {
-                // Start with current date
-                let periodStartDate = new Date(currentDate);
-
-                // Add the month offset
-                periodStartDate.setMonth(periodStartDate.getMonth() + monthOffset);
-
-                // Set to the specified start day
-                periodStartDate.setDate(startDay);
-
-                // Calculate end date (one day before next period start)
-                let periodEndDate = new Date(periodStartDate);
-                periodEndDate.setMonth(periodEndDate.getMonth() + 1);
-                periodEndDate.setDate(periodEndDate.getDate() - 1);
+            // Helper function to calculate period dates based on a reference date
+            const calculatePeriodFromReference = (
+                referenceYear: number,
+                referenceMonth: number
+            ) => {
+                const periodStartDate = new Date(
+                    Date.UTC(referenceYear, referenceMonth, startDay, 0, 0, 0, 0)
+                );
+                const nextPeriodStart = new Date(
+                    Date.UTC(referenceYear, referenceMonth + 1, startDay, 0, 0, 0, 0)
+                );
+                const periodEndDate = new Date(nextPeriodStart.getTime() - 1);
 
                 return { start: periodStartDate, end: periodEndDate };
             };
@@ -732,37 +729,48 @@ voucherRoutes.get(
                     "nov",
                     "dez",
                 ];
-
-                const startDay = startDate.getDate();
-                const startMonth = months[startDate.getMonth()];
-                const endDay = endDate.getDate();
-                const endMonth = months[endDate.getMonth()];
+                const startDay = startDate.getUTCDate();
+                const startMonth = months[startDate.getUTCMonth()];
+                const endDay = endDate.getUTCDate();
+                const endMonth = months[endDate.getUTCMonth()];
 
                 return `${startDay} de ${startMonth} - ${endDay} de ${endMonth}`;
             };
 
-            // Calculate the three periods
-            const periods = [];
+            // Determine the current period based on today's date and monthStartDay
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            const currentDay = currentDate.getDate();
 
-            // Find which period we're currently in based on monthStartDay
-            let currentPeriodOffset = 0;
+            let currentPeriodMonth = currentMonth;
+            let currentPeriodYear = currentYear;
 
-            // Check if current date is before or after the start day of current month
-            const currentMonthStartDay = new Date(
-                currentDate.getFullYear(),
-                currentDate.getMonth(),
-                startDay
-            );
-
-            if (currentDate < currentMonthStartDay) {
-                // We're still in the previous period
-                currentPeriodOffset = -1;
+            if (currentDay < startDay) {
+                currentPeriodMonth = currentMonth - 1;
+                if (currentPeriodMonth < 0) {
+                    currentPeriodMonth = 11;
+                    currentPeriodYear = currentYear - 1;
+                }
             }
 
-            // Calculate periods: -2, -1, and 0 relative to current period
+            // Calculate the three periods: -2, -1, and 0 relative to current period
+            const periods = [];
+
             for (let offset = -2; offset <= 0; offset++) {
-                const actualOffset = currentPeriodOffset + offset;
-                const period = calculatePeriod(actualOffset);
+                let periodMonth = currentPeriodMonth + offset;
+                let periodYear = currentPeriodYear;
+
+                // Handle year transitions
+                while (periodMonth < 0) {
+                    periodMonth += 12;
+                    periodYear -= 1;
+                }
+                while (periodMonth > 11) {
+                    periodMonth -= 12;
+                    periodYear += 1;
+                }
+
+                const period = calculatePeriodFromReference(periodYear, periodMonth);
 
                 // Get vouchers for this period
                 const vouchersInPeriod = await prisma.voucherV2.findMany({
@@ -787,19 +795,15 @@ voucherRoutes.get(
                 periods.push({
                     title: "Referente aos vouchers de",
                     dateRange: formatDateRange(period.start, period.end),
-                    value: Math.round(totalValue * 100) / 100, // Round to 2 decimal places
+                    value: Math.round(totalValue * 100) / 100,
                     monthOffset: offset,
                 });
             }
 
             // Get 5 most recent vouchers
             const recentVouchers = await prisma.voucherV2.findMany({
-                where: {
-                    userId: userId,
-                },
-                orderBy: {
-                    date: "desc",
-                },
+                where: { userId },
+                orderBy: { date: "desc" },
                 take: 5,
                 select: {
                     id: true,
@@ -817,8 +821,8 @@ voucherRoutes.get(
                 id: voucher.id,
                 taxNumber: voucher.taxNumber,
                 requestCode: voucher.requestCode,
-                date: voucher.date.toISOString().split("T")[0], // Format as YYYY-MM-DD
-                value: Math.round(voucher.value * 100) / 100, // Round to 2 decimal places
+                date: voucher.date.toISOString().split("T")[0],
+                value: Math.round(voucher.value * 100) / 100,
                 start: voucher.start,
                 destination: voucher.destination,
             }));
