@@ -65,7 +65,7 @@ expenseRoutes.get(
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
         // Optional query parameters
-        const { category, startDate, endDate } = req.query;
+        const { category, startDate, endDate, from, to, offset, limit } = req.query;
 
         // Build the where clause
         const whereClause: Prisma.ExpenseWhereInput = { userId: id };
@@ -75,36 +75,86 @@ expenseRoutes.get(
             whereClause.category = category as ExpenseCategory;
         }
 
-        // Filter by date range if provided
-        if (startDate || endDate) {
+        // Filter by date range if provided (prioritize from/to over startDate/endDate)
+        const fromDate = from || startDate;
+        const toDate = to || endDate;
+
+        if (fromDate || toDate) {
             whereClause.date = {};
 
-            if (startDate) {
+            if (fromDate) {
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    gte: new Date(startDate as string),
+                    gte: new Date(fromDate as string),
                 };
             }
 
-            if (endDate) {
+            if (toDate) {
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    lte: new Date(endDate as string),
+                    lte: new Date(toDate as string),
                 };
             }
         }
 
-        const expenses = await prisma.expense.findMany({
-            where: whereClause,
-            orderBy: {
-                date: "desc",
-            },
-        });
+        // Parse pagination parameters
+        const pageOffset = offset ? parseInt(offset as string) : 0;
+        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
 
-        if (expenses.length === 0) {
-            res.status(404).json({ message: "Nenhuma despesa foi encontrada" });
-        } else {
-            res.status(200).json({ expenses });
+        // Validate pagination parameters
+        if (pageOffset < 0) {
+            res.status(422).json({ message: "Offset must be a non-negative number" });
+            return;
+        }
+
+        if (pageLimit <= 0 || pageLimit > 100) {
+            res.status(422).json({ message: "Limit must be between 1 and 100" });
+            return;
+        }
+
+        try {
+            // Get total count for pagination info
+            const totalCount = await prisma.expense.count({
+                where: whereClause,
+            });
+
+            // Get expenses with pagination
+            const expenses = await prisma.expense.findMany({
+                where: whereClause,
+                orderBy: {
+                    date: "desc",
+                },
+                skip: pageOffset,
+                take: pageLimit,
+            });
+
+            // Calculate pagination metadata
+            const totalPages = Math.ceil(totalCount / pageLimit);
+            const currentPage = Math.floor(pageOffset / pageLimit) + 1;
+            const hasNextPage = pageOffset + pageLimit < totalCount;
+            const hasPreviousPage = pageOffset > 0;
+
+            if (expenses.length === 0 && totalCount === 0) {
+                res.status(404).json({ message: "Nenhuma despesa foi encontrada" });
+            } else {
+                res.status(200).json({
+                    expenses,
+                    pagination: {
+                        totalCount,
+                        totalPages,
+                        currentPage,
+                        limit: pageLimit,
+                        offset: pageOffset,
+                        hasNextPage,
+                        hasPreviousPage,
+                    },
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                message: "Erro ao buscar despesas",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
         }
     }
 );
@@ -286,26 +336,29 @@ expenseRoutes.get(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, from, to } = req.query;
 
         // Build the where clause
         const whereClause: Prisma.ExpenseWhereInput = { userId: id };
 
-        // Filter by date range if provided
-        if (startDate || endDate) {
+        // Filter by date range if provided (prioritize from/to over startDate/endDate)
+        const fromDate = from || startDate;
+        const toDate = to || endDate;
+
+        if (fromDate || toDate) {
             whereClause.date = {};
 
-            if (startDate) {
+            if (fromDate) {
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    gte: new Date(startDate as string),
+                    gte: new Date(fromDate as string),
                 };
             }
 
-            if (endDate) {
+            if (toDate) {
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    lte: new Date(endDate as string),
+                    lte: new Date(toDate as string),
                 };
             }
         }
@@ -342,6 +395,10 @@ expenseRoutes.get(
         res.status(200).json({
             summary,
             total,
+            period: {
+                from: fromDate ? new Date(fromDate as string).toISOString().split("T")[0] : null,
+                to: toDate ? new Date(toDate as string).toISOString().split("T")[0] : null,
+            },
         });
     }
 );

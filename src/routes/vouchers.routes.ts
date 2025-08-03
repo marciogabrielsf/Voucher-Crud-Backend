@@ -50,14 +50,79 @@ voucherRoutes.get(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
+        const { from, to, offset, limit } = req.query;
 
-        const vouchers = await prisma.voucher.findMany({
-            where: {
-                userId: id,
-            },
-        });
+        // Build the where clause
+        const whereClause: any = { userId: id };
 
-        res.status(200).json({ vouchers });
+        // Filter by date range if provided
+        if (from || to) {
+            whereClause.voucherDate = {};
+
+            if (from) {
+                whereClause.voucherDate.gte = new Date(from as string);
+            }
+
+            if (to) {
+                whereClause.voucherDate.lte = new Date(to as string);
+            }
+        }
+
+        // Parse pagination parameters
+        const pageOffset = offset ? parseInt(offset as string) : 0;
+        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
+
+        // Validate pagination parameters
+        if (pageOffset < 0) {
+            res.status(422).json({ message: "Offset must be a non-negative number" });
+            return;
+        }
+
+        if (pageLimit <= 0 || pageLimit > 100) {
+            res.status(422).json({ message: "Limit must be between 1 and 100" });
+            return;
+        }
+
+        try {
+            // Get total count for pagination info
+            const totalCount = await prisma.voucher.count({
+                where: whereClause,
+            });
+
+            // Get vouchers with pagination
+            const vouchers = await prisma.voucher.findMany({
+                where: whereClause,
+                orderBy: {
+                    voucherDate: "desc",
+                },
+                skip: pageOffset,
+                take: pageLimit,
+            });
+
+            // Calculate pagination metadata
+            const totalPages = Math.ceil(totalCount / pageLimit);
+            const currentPage = Math.floor(pageOffset / pageLimit) + 1;
+            const hasNextPage = pageOffset + pageLimit < totalCount;
+            const hasPreviousPage = pageOffset > 0;
+
+            res.status(200).json({
+                vouchers,
+                pagination: {
+                    totalCount,
+                    totalPages,
+                    currentPage,
+                    limit: pageLimit,
+                    offset: pageOffset,
+                    hasNextPage,
+                    hasPreviousPage,
+                },
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Erro ao buscar vouchers",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
     }
 );
 
@@ -222,14 +287,79 @@ voucherRoutes.get(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
+        const { from, to, offset, limit } = req.query;
 
-        const vouchers = await prisma.voucherV2.findMany({
-            where: {
-                userId: id,
-            },
-        });
+        // Build the where clause
+        const whereClause: any = { userId: id };
 
-        res.status(200).json({ vouchers });
+        // Filter by date range if provided
+        if (from || to) {
+            whereClause.date = {};
+
+            if (from) {
+                whereClause.date.gte = new Date(from as string);
+            }
+
+            if (to) {
+                whereClause.date.lte = new Date(to as string);
+            }
+        }
+
+        // Parse pagination parameters
+        const pageOffset = offset ? parseInt(offset as string) : 0;
+        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
+
+        // Validate pagination parameters
+        if (pageOffset < 0) {
+            res.status(422).json({ message: "Offset must be a non-negative number" });
+            return;
+        }
+
+        if (pageLimit <= 0 || pageLimit > 100) {
+            res.status(422).json({ message: "Limit must be between 1 and 100" });
+            return;
+        }
+
+        try {
+            // Get total count for pagination info
+            const totalCount = await prisma.voucherV2.count({
+                where: whereClause,
+            });
+
+            // Get vouchers with pagination
+            const vouchers = await prisma.voucherV2.findMany({
+                where: whereClause,
+                orderBy: {
+                    date: "desc",
+                },
+                skip: pageOffset,
+                take: pageLimit,
+            });
+
+            // Calculate pagination metadata
+            const totalPages = Math.ceil(totalCount / pageLimit);
+            const currentPage = Math.floor(pageOffset / pageLimit) + 1;
+            const hasNextPage = pageOffset + pageLimit < totalCount;
+            const hasPreviousPage = pageOffset > 0;
+
+            res.status(200).json({
+                vouchers,
+                pagination: {
+                    totalCount,
+                    totalPages,
+                    currentPage,
+                    limit: pageLimit,
+                    offset: pageOffset,
+                    hasNextPage,
+                    hasPreviousPage,
+                },
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Erro ao buscar vouchers",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
     }
 );
 
