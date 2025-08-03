@@ -368,13 +368,6 @@ expenseRoutes.get(
             },
         });
 
-        if (expenses.length === 0) {
-            res.status(404).json({
-                message: "Nenhuma despesa foi encontrada no período especificado",
-            });
-            return;
-        }
-
         // Calculate total by category
         const summary = expenses.reduce((acc: Record<string, number>, expense) => {
             const category = expense.category;
