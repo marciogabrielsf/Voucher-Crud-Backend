@@ -70,16 +70,11 @@ voucherRoutes.get(
 
         // Parse pagination parameters
         const pageOffset = offset ? parseInt(offset as string) : 0;
-        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
+        const pageLimit = limit ? parseInt(limit as string) : 500; // Default limit of 250
 
         // Validate pagination parameters
         if (pageOffset < 0) {
             res.status(422).json({ message: "Offset must be a non-negative number" });
-            return;
-        }
-
-        if (pageLimit <= 0 || pageLimit > 100) {
-            res.status(422).json({ message: "Limit must be between 1 and 100" });
             return;
         }
 
@@ -307,7 +302,7 @@ voucherRoutes.get(
 
         // Parse pagination parameters
         const pageOffset = offset ? parseInt(offset as string) : 0;
-        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
+        const pageLimit = limit ? parseInt(limit as string) : 250; // Default limit of 250
 
         // Validate pagination parameters
         if (pageOffset < 0) {
@@ -315,8 +310,8 @@ voucherRoutes.get(
             return;
         }
 
-        if (pageLimit <= 0 || pageLimit > 100) {
-            res.status(422).json({ message: "Limit must be between 1 and 100" });
+        if (pageLimit <= 0 || pageLimit > 500) {
+            res.status(422).json({ message: "Limit must be between 1 and 500" });
             return;
         }
 
@@ -673,6 +668,168 @@ voucherRoutes.get(
         } catch (error) {
             res.status(500).json({
                 message: "Erro ao buscar estatísticas de vouchers",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
+    }
+);
+
+// Home summary endpoint for optimized initial screen
+voucherRoutes.get(
+    "/v2/voucher/home-summary",
+    verifyJWT,
+    async (req: Request, res: Response): Promise<void> => {
+        const userId = req.body.id;
+        const { monthStartDay } = req.query;
+
+        // Validate monthStartDay parameter
+        if (!monthStartDay) {
+            res.status(422).json({ message: "monthStartDay parameter is required" });
+            return;
+        }
+
+        const startDay = parseInt(monthStartDay as string);
+        if (isNaN(startDay) || startDay < 1 || startDay > 31) {
+            res.status(422).json({ message: "monthStartDay must be a number between 1 and 31" });
+            return;
+        }
+
+        try {
+            const currentDate = new Date();
+
+            // Helper function to calculate period dates
+            const calculatePeriod = (monthOffset: number) => {
+                // Start with current date
+                let periodStartDate = new Date(currentDate);
+
+                // Add the month offset
+                periodStartDate.setMonth(periodStartDate.getMonth() + monthOffset);
+
+                // Set to the specified start day
+                periodStartDate.setDate(startDay);
+
+                // Calculate end date (one day before next period start)
+                let periodEndDate = new Date(periodStartDate);
+                periodEndDate.setMonth(periodEndDate.getMonth() + 1);
+                periodEndDate.setDate(periodEndDate.getDate() - 1);
+
+                return { start: periodStartDate, end: periodEndDate };
+            };
+
+            // Helper function to format date range in Portuguese
+            const formatDateRange = (startDate: Date, endDate: Date): string => {
+                const months = [
+                    "jan",
+                    "fev",
+                    "mar",
+                    "abr",
+                    "mai",
+                    "jun",
+                    "jul",
+                    "ago",
+                    "set",
+                    "out",
+                    "nov",
+                    "dez",
+                ];
+
+                const startDay = startDate.getDate();
+                const startMonth = months[startDate.getMonth()];
+                const endDay = endDate.getDate();
+                const endMonth = months[endDate.getMonth()];
+
+                return `${startDay} de ${startMonth} - ${endDay} de ${endMonth}`;
+            };
+
+            // Calculate the three periods
+            const periods = [];
+
+            // Find which period we're currently in based on monthStartDay
+            let currentPeriodOffset = 0;
+
+            // Check if current date is before or after the start day of current month
+            const currentMonthStartDay = new Date(
+                currentDate.getFullYear(),
+                currentDate.getMonth(),
+                startDay
+            );
+
+            if (currentDate < currentMonthStartDay) {
+                // We're still in the previous period
+                currentPeriodOffset = -1;
+            }
+
+            // Calculate periods: -2, -1, and 0 relative to current period
+            for (let offset = -2; offset <= 0; offset++) {
+                const actualOffset = currentPeriodOffset + offset;
+                const period = calculatePeriod(actualOffset);
+
+                // Get vouchers for this period
+                const vouchersInPeriod = await prisma.voucherV2.findMany({
+                    where: {
+                        userId: userId,
+                        date: {
+                            gte: period.start,
+                            lte: period.end,
+                        },
+                    },
+                    select: {
+                        value: true,
+                    },
+                });
+
+                // Calculate total value for the period
+                const totalValue = vouchersInPeriod.reduce(
+                    (sum, voucher) => sum + voucher.value,
+                    0
+                );
+
+                periods.push({
+                    title: "Referente aos vouchers de",
+                    dateRange: formatDateRange(period.start, period.end),
+                    value: Math.round(totalValue * 100) / 100, // Round to 2 decimal places
+                    monthOffset: offset,
+                });
+            }
+
+            // Get 5 most recent vouchers
+            const recentVouchers = await prisma.voucherV2.findMany({
+                where: {
+                    userId: userId,
+                },
+                orderBy: {
+                    date: "desc",
+                },
+                take: 5,
+                select: {
+                    id: true,
+                    taxNumber: true,
+                    requestCode: true,
+                    date: true,
+                    value: true,
+                    start: true,
+                    destination: true,
+                },
+            });
+
+            // Format recent vouchers for response
+            const formattedRecentVouchers = recentVouchers.map((voucher) => ({
+                id: voucher.id,
+                taxNumber: voucher.taxNumber,
+                requestCode: voucher.requestCode,
+                date: voucher.date.toISOString().split("T")[0], // Format as YYYY-MM-DD
+                value: Math.round(voucher.value * 100) / 100, // Round to 2 decimal places
+                start: voucher.start,
+                destination: voucher.destination,
+            }));
+
+            res.status(200).json({
+                periods,
+                recentVouchers: formattedRecentVouchers,
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Erro ao buscar dados do resumo da tela inicial",
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }

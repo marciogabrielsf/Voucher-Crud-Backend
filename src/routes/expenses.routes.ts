@@ -99,16 +99,11 @@ expenseRoutes.get(
 
         // Parse pagination parameters
         const pageOffset = offset ? parseInt(offset as string) : 0;
-        const pageLimit = limit ? parseInt(limit as string) : 50; // Default limit of 50
+        const pageLimit = limit ? parseInt(limit as string) : 250; // Default limit of 250
 
         // Validate pagination parameters
         if (pageOffset < 0) {
             res.status(422).json({ message: "Offset must be a non-negative number" });
-            return;
-        }
-
-        if (pageLimit <= 0 || pageLimit > 100) {
-            res.status(422).json({ message: "Limit must be between 1 and 100" });
             return;
         }
 
