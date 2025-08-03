@@ -346,4 +346,64 @@ expenseRoutes.get(
     }
 );
 
+// Webhook for WhatsApp bot integration
+expenseRoutes.post(
+    "/webhook/expense/create",
+    async (req: Request, res: Response): Promise<void> => {
+        const { value, category, date, description, paymentMethod, userId, apiKey } = req.body;
+
+        // Verify API key for webhook security
+        if (!apiKey || apiKey !== process.env.WEBHOOK_API_KEY) {
+            res.status(401).json({ message: "Unauthorized: Invalid API key" });
+            return;
+        }
+
+        if (!userId || !value || !category || !date) {
+            res.status(422).json({
+                message: "Missing required parameters: userId, value, category, date",
+            });
+            return;
+        }
+
+        // Validate category is a valid enum value
+        const validCategories = Object.values(ExpenseCategory);
+        if (!validCategories.includes(category as ExpenseCategory)) {
+            res.status(422).json({
+                message: "Invalid category. Valid values are: " + validCategories.join(", "),
+            });
+            return;
+        }
+
+        // Parse date - expecting new Date() format
+        const parsedDate = typeof date === "string" ? new Date(date) : date;
+
+        // Parse value if it's a string (handle Brazilian format with comma)
+        const parsedValue = typeof value === "string" ? parseFloat(value.replace(",", ".")) : value;
+
+        await prisma.expense
+            .create({
+                data: {
+                    userId,
+                    value: parsedValue,
+                    category: category as ExpenseCategory,
+                    date: parsedDate,
+                    description,
+                    paymentMethod,
+                },
+            })
+            .then(() => {
+                res.status(201).json({
+                    code: "expense.created-success",
+                    message: "Despesa registrada com sucesso via webhook!",
+                });
+            })
+            .catch((err) => {
+                res.status(500).json({
+                    message: "Erro ao registrar a despesa, tente novamente mais tarde",
+                    error: err.message,
+                });
+            });
+    }
+);
+
 export default expenseRoutes;
