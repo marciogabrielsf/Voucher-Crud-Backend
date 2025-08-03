@@ -134,22 +134,18 @@ expenseRoutes.get(
             const hasNextPage = pageOffset + pageLimit < totalCount;
             const hasPreviousPage = pageOffset > 0;
 
-            if (expenses.length === 0 && totalCount === 0) {
-                res.status(404).json({ message: "Nenhuma despesa foi encontrada" });
-            } else {
-                res.status(200).json({
-                    expenses,
-                    pagination: {
-                        totalCount,
-                        totalPages,
-                        currentPage,
-                        limit: pageLimit,
-                        offset: pageOffset,
-                        hasNextPage,
-                        hasPreviousPage,
-                    },
-                });
-            }
+            res.status(200).json({
+                expenses,
+                pagination: {
+                    totalCount,
+                    totalPages,
+                    currentPage,
+                    limit: pageLimit,
+                    offset: pageOffset,
+                    hasNextPage,
+                    hasPreviousPage,
+                },
+            });
         } catch (error) {
             res.status(500).json({
                 message: "Erro ao buscar despesas",
