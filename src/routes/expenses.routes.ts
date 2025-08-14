@@ -83,16 +83,22 @@ expenseRoutes.get(
             whereClause.date = {};
 
             if (fromDate) {
+                const dateStr = fromDate as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    gte: new Date(fromDate as string),
+                    gte: startOfDay,
                 };
             }
 
             if (toDate) {
+                const dateStr = toDate as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    lte: new Date(toDate as string),
+                    lte: endOfDay,
                 };
             }
         }
@@ -112,6 +118,8 @@ expenseRoutes.get(
             const totalCount = await prisma.expense.count({
                 where: whereClause,
             });
+
+            console.log(whereClause);
 
             // Get expenses with pagination
             const expenses = await prisma.expense.findMany({
@@ -340,16 +348,22 @@ expenseRoutes.get(
             whereClause.date = {};
 
             if (fromDate) {
+                const dateStr = fromDate as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    gte: new Date(fromDate as string),
+                    gte: startOfDay,
                 };
             }
 
             if (toDate) {
+                const dateStr = toDate as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
                 whereClause.date = {
                     ...(whereClause.date as object),
-                    lte: new Date(toDate as string),
+                    lte: endOfDay,
                 };
             }
         }

@@ -60,11 +60,17 @@ voucherRoutes.get(
             whereClause.voucherDate = {};
 
             if (from) {
-                whereClause.voucherDate.gte = new Date(from as string);
+                const dateStr = from as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+                whereClause.voucherDate.gte = startOfDay;
             }
 
             if (to) {
-                whereClause.voucherDate.lte = new Date(to as string);
+                const dateStr = to as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+                whereClause.voucherDate.lte = endOfDay;
             }
         }
 
@@ -292,11 +298,17 @@ voucherRoutes.get(
             whereClause.date = {};
 
             if (from) {
-                whereClause.date.gte = new Date(from as string);
+                const dateStr = from as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+                whereClause.date.gte = startOfDay;
             }
 
             if (to) {
-                whereClause.date.lte = new Date(to as string);
+                const dateStr = to as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+                whereClause.date.lte = endOfDay;
             }
         }
 
@@ -547,8 +559,21 @@ voucherRoutes.get(
         let toDate: Date;
 
         try {
-            fromDate = from ? new Date(from as string) : defaultFromDate;
-            toDate = to ? new Date(to as string) : defaultToDate;
+            if (from) {
+                const dateStr = from as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                fromDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+            } else {
+                fromDate = defaultFromDate;
+            }
+
+            if (to) {
+                const dateStr = to as string;
+                const [year, month, day] = dateStr.split("-").map(Number);
+                toDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+            } else {
+                toDate = defaultToDate;
+            }
 
             // Validate dates
             if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
