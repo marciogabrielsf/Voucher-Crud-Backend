@@ -55,7 +55,7 @@ expenseRoutes.post(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 // Get all expenses for a user
@@ -155,13 +155,13 @@ expenseRoutes.get(
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }
-    }
+    },
 );
 
 // Get expense by ID
 expenseRoutes.get("/expense/:id", verifyJWT, async (req: Request, res: Response): Promise<void> => {
     const userId = req.body.id;
-    const expenseId = req.params.id;
+    const expenseId = req.params.id as string;
 
     const checkForHexRegExp = /^[0-9a-fA-F]{24}$/;
     if (!checkForHexRegExp.test(expenseId)) {
@@ -194,7 +194,7 @@ expenseRoutes.put(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const userId = req.body.id;
-        const expenseId = req.params.id;
+        const expenseId = req.params.id as string;
         const { value, category, date, description, paymentMethod } = req.body;
 
         if (
@@ -281,7 +281,7 @@ expenseRoutes.put(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 // Delete an expense
@@ -290,7 +290,7 @@ expenseRoutes.delete(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const userId = req.body.id;
-        const expenseId = req.params.id;
+        const expenseId = req.params.id as string;
 
         const checkForHexRegExp = /^[0-9a-fA-F]{24}$/;
         if (!checkForHexRegExp.test(expenseId)) {
@@ -326,7 +326,7 @@ expenseRoutes.delete(
             .catch(() => {
                 res.status(500).json({ message: "Erro ao excluir a despesa" });
             });
-    }
+    },
 );
 
 // Get total expenses summary grouped by category
@@ -398,7 +398,7 @@ expenseRoutes.get(
                 to: toDate ? new Date(toDate as string).toISOString().split("T")[0] : null,
             },
         });
-    }
+    },
 );
 
 // Webhook for WhatsApp bot integration
@@ -458,7 +458,7 @@ expenseRoutes.post(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 export default expenseRoutes;

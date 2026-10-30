@@ -42,7 +42,7 @@ voucherRoutes.post(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 voucherRoutes.get(
@@ -124,7 +124,7 @@ voucherRoutes.get(
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }
-    }
+    },
 );
 
 voucherRoutes.put(
@@ -132,7 +132,7 @@ voucherRoutes.put(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
-        const voucherID = req.params.id;
+        const voucherID = req.params.id as string;
         const { value, company, orderNumber, voucherDate, voucherNumber } = req.body;
 
         if (!value || !company || !orderNumber || !voucherDate || !voucherNumber) {
@@ -184,7 +184,7 @@ voucherRoutes.put(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 voucherRoutes.delete(
@@ -192,7 +192,7 @@ voucherRoutes.delete(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
-        const voucherID = req.params.id;
+        const voucherID = req.params.id as string;
 
         const checkForHexRegExp = /^[0-9a-fA-F]{24}$/;
         if (!checkForHexRegExp.test(voucherID)) {
@@ -228,7 +228,7 @@ voucherRoutes.delete(
             .catch(() => {
                 res.status(500).json({ message: "Erro ao deletar o Voucher" });
             });
-    }
+    },
 );
 
 // Version 2 routes
@@ -280,7 +280,7 @@ voucherRoutes.post(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 voucherRoutes.get(
@@ -367,7 +367,7 @@ voucherRoutes.get(
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }
-    }
+    },
 );
 
 voucherRoutes.put(
@@ -375,7 +375,7 @@ voucherRoutes.put(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
-        const voucherID = req.params.id;
+        const voucherID = req.params.id as string;
         const { taxNumber, requestCode, date, value, start, destination } = req.body;
 
         if (!taxNumber || !requestCode || !date || !value || !start || !destination) {
@@ -438,7 +438,7 @@ voucherRoutes.put(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 voucherRoutes.delete(
@@ -446,7 +446,7 @@ voucherRoutes.delete(
     verifyJWT,
     async (req: Request, res: Response): Promise<void> => {
         const id = req.body.id;
-        const voucherID = req.params.id;
+        const voucherID = req.params.id as string;
 
         const checkForHexRegExp = /^[0-9a-fA-F]{24}$/;
         if (!checkForHexRegExp.test(voucherID)) {
@@ -482,7 +482,7 @@ voucherRoutes.delete(
             .catch(() => {
                 res.status(500).json({ message: "Erro ao deletar o Voucher" });
             });
-    }
+    },
 );
 
 // Webhook for WhatsApp bot integration
@@ -539,7 +539,7 @@ voucherRoutes.post(
                     error: err.message,
                 });
             });
-    }
+    },
 );
 
 // Statistics route for earnings over time
@@ -647,13 +647,13 @@ voucherRoutes.get(
             vouchers.forEach((voucher) => {
                 const voucherDate = new Date(voucher.date);
                 const daysSinceStart = Math.floor(
-                    (voucherDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24)
+                    (voucherDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24),
                 );
                 const intervalIndex = Math.floor(daysSinceStart / intervalDays);
 
                 // Calculate the representative date for this interval
                 const intervalStartDate = new Date(
-                    fromDate.getTime() + intervalIndex * intervalDays * 24 * 60 * 60 * 1000
+                    fromDate.getTime() + intervalIndex * intervalDays * 24 * 60 * 60 * 1000,
                 );
                 const dateKey = intervalStartDate.toISOString().split("T")[0];
 
@@ -671,7 +671,7 @@ voucherRoutes.get(
 
             // Convert to array and sort by date
             const chartData = Object.values(groupedData).sort(
-                (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
             );
 
             // Calculate summary statistics
@@ -696,7 +696,7 @@ voucherRoutes.get(
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }
-    }
+    },
 );
 
 // Home summary endpoint for optimized initial screen
@@ -725,13 +725,13 @@ voucherRoutes.get(
             // Helper function to calculate period dates based on a reference date
             const calculatePeriodFromReference = (
                 referenceYear: number,
-                referenceMonth: number
+                referenceMonth: number,
             ) => {
                 const periodStartDate = new Date(
-                    Date.UTC(referenceYear, referenceMonth, startDay, 0, 0, 0, 0)
+                    Date.UTC(referenceYear, referenceMonth, startDay, 0, 0, 0, 0),
                 );
                 const nextPeriodStart = new Date(
-                    Date.UTC(referenceYear, referenceMonth + 1, startDay, 0, 0, 0, 0)
+                    Date.UTC(referenceYear, referenceMonth + 1, startDay, 0, 0, 0, 0),
                 );
                 const periodEndDate = new Date(nextPeriodStart.getTime() - 1);
 
@@ -814,7 +814,7 @@ voucherRoutes.get(
                 // Calculate total value for the period
                 const totalValue = vouchersInPeriod.reduce(
                     (sum, voucher) => sum + voucher.value,
-                    0
+                    0,
                 );
 
                 periods.push({
@@ -862,7 +862,7 @@ voucherRoutes.get(
                 error: error instanceof Error ? error.message : "Unknown error",
             });
         }
-    }
+    },
 );
 
 export default voucherRoutes;
